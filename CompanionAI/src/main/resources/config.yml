@@ -1,0 +1,30 @@
+#============================[Companion Settings]=================================
+settings:
+  health-name:
+    enabled: true
+    health-format: "&b%name% &7%health%&8/&7%max_health%"
+
+  clicks:
+    enabled: true
+    shift-right-click-inventory: true
+    right-click-toggle-follow: true
+
+  combat:
+    protect-owner: true
+    assist-owner: true
+
+  stats:
+    max-health: 40.0
+    attack-damage: 8.0
+
+  follow:
+    max-distance: 30.0
+    max-vertical-distance: 8.0
+
+  # Velocidad de disparo de los companions (en Ticks: 20 ticks = 1 segundo)
+  combat-delay:
+    archer: 40
+    mage: 40
+    wind-elementalist: 40
+
+#============================[Companion Data]=================================
