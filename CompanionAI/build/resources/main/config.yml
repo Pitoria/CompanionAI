@@ -1,30 +1,40 @@
-#============================[Companion Settings]=================================
+# PlaceHolders: %player% %state% %spawned% %companion% %id% %health% %max_health% %skin%
+
+#==============================[Companion Settings]=====================================
 settings:
   health-name:
-    enabled: true
-    health-format: "&b%name% &7%health%&8/&7%max_health%"
+    enabled: true # => Use this naming style
+    health-format: "&b%name% &7%health%&8/&7%max_health%" # => Style
 
   clicks:
     enabled: true
-    shift-right-click-inventory: true
-    right-click-toggle-follow: true
+    shift-right-click-inventory: true # => Open inventory of the Companion
+    right-click-toggle-follow: true # => Toggle follow/stay Companion
 
   combat:
-    protect-owner: true
-    assist-owner: true
+    protect-owner: true # => Protect Owner? Yes = True / No = False
+    assist-owner: true # => Help the owner attack? Yes = True / No = False
 
   stats:
-    max-health: 40.0
-    attack-damage: 8.0
+    max-health: 40.0 # => Max health companion
+    attack-damage: 8.0 # => Only changed melee (sword, axe, hand, etc...)
 
   follow:
-    max-distance: 30.0
-    max-vertical-distance: 8.0
+    max-distance: 30.0 # => Max distance before teleport.
+    max-vertical-distance: 8.0 # => Max distance before teleport.
 
-  # Velocidad de disparo de los companions (en Ticks: 20 ticks = 1 segundo)
-  combat-delay:
-    archer: 40
-    mage: 40
-    wind-elementalist: 40
-
+#============= Speed shot companion (Ticks: 20 ticks = 1 s) ===============#
+combat-delay:
+  archer: 40 # => bow
+  mage: 40 # => blaze_rod
+  wind-elementalist: 40 # => breeze_rod
+combat:
+  # Arquero (Bow, CrossBow)
+  archer-damage: 4.5
+  # Mago de Fuego (Blaze_rod)
+  fire-damage: 3.0
+  # Mago de Hielo (End_rod)
+  ice-damage: 4.6
+  # Viento (Breeze_rod)
+  wind-damage: 4.5
 #============================[Companion Data]=================================

@@ -121,38 +121,48 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
             case "reload" -> reloadPlugin(sender);
 
             case "create" -> {
-
-                if (args.length >= 2 || player == null) {
-
+                if (args.length >= 2) {
+                    // Lógica para OTRO jugador
                     if (!sender.hasPermission("companion.admin")) {
-                        sender.sendMessage(MessageUtil.msg(plugin, "no-permission", null, player));
+                        sender.sendMessage(MessageUtil.msg(plugin, "no-permission", null, (Player) sender));
                         return true;
                     }
 
                     Player target = Bukkit.getPlayer(args[1]);
-
                     if (target == null) {
-                        sender.sendMessage(MessageUtil.msg(plugin, "player-not-found", null, player));
+                        sender.sendMessage(MessageUtil.msg(plugin, "player-not-found", null, (Player) sender));
                         return true;
                     }
 
-                    createCompanion(target);
-                    sender.sendMessage(MessageUtil.msg(plugin, "companion-created", null, player));
+                    NPC npc = createCompanion(target);
+
+                    // Solo enviamos el mensaje si el NPC se creó (si no es null)
+                    if (npc != null) {
+                        sender.sendMessage(MessageUtil.msg(plugin, "companion-created-other", npc, target));
+                        sender.sendMessage(ChatColor.GRAY + "NPC ID: " + npc.getId());
+                    }
+                    return true;
+                } else {
+                    // Lógica para TI MISMO (sin argumentos)
+                    if (player == null) {
+                        sender.sendMessage(MessageUtil.msg(plugin, "only-player", null, null));
+                        return true;
+                    }
+
+                    NPC npc = createCompanion(player);
+
+                    // Solo enviamos el mensaje si el NPC se creó (si no es null)
+                    if (npc != null) {
+                        sender.sendMessage(MessageUtil.msg(plugin, "companion-created", npc, player));
+                        sender.sendMessage(ChatColor.GRAY + "NPC ID: " + npc.getId());
+                    }
                     return true;
                 }
-
-                if (!player.hasPermission("companion.admin")) {
-                    sender.sendMessage(MessageUtil.msg(plugin, "no-permission", null, player));
-                    return true;
-                }
-
-                createCompanion(player);
             }
 
             case "remove" -> {
-
-                if (args.length >= 2 || player == null) {
-
+                if (args.length >= 2) {
+                    // Lógica para OTRO jugador
                     if (!sender.hasPermission("companion.admin")) {
                         sender.sendMessage(MessageUtil.msg(plugin, "no-permission", null, player));
                         return true;
@@ -165,17 +175,38 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
 
-                    removeCompanion(target);
-                    sender.sendMessage(MessageUtil.msg(plugin, "companion-removed", null, player));
+                    NPC npc = removeCompanion(target);
+
+                    if (npc != null) {
+                        // Pasamos el NPC para que detecte %companion%
+                        sender.sendMessage(MessageUtil.msg(plugin, "companion-removed-other", npc, target));
+                    } else {
+                        sender.sendMessage(MessageUtil.msg(plugin, "companion-not-found", null, target));
+                    }
+                    return true;
+                } else {
+                    // Lógica para TI MISMO
+                    if (!(sender instanceof Player playerSender)) {
+                        sender.sendMessage(MessageUtil.msg(plugin, "only-player", null, null));
+                        return true;
+                    }
+
+                    // Reviso si tiene permiso para removerse a sí mismo
+                    if (!playerSender.hasPermission("companion.admin")) {
+                        playerSender.sendMessage(MessageUtil.msg(plugin, "no-permission", null, playerSender));
+                        return true;
+                    }
+
+                    NPC npc = removeCompanion(playerSender);
+
+                    if (npc != null) {
+                        // Pasamos el NPC para que detecte %companion%
+                        playerSender.sendMessage(MessageUtil.msg(plugin, "companion-removed", npc, playerSender));
+                    } else {
+                        playerSender.sendMessage(MessageUtil.msg(plugin, "companion-not-found", null, playerSender));
+                    }
                     return true;
                 }
-
-                if (!player.hasPermission("companion.admin")) {
-                    player.sendMessage(MessageUtil.msg(plugin,"no-permission", null, player));
-                    return true;
-                }
-
-                removeCompanion(player);
             }
 
             case "summon" -> summonCompanion(player);
@@ -202,17 +233,16 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
 
     //================================CreateCommand=====================================================
 
-    private void createCompanion(Player player) {
+    private NPC createCompanion(Player player) { // <-- CAMBIADO DE void A NPC
         String path = getNpcPath(player.getUniqueId());
 
         if (plugin.getDataManager().getData().contains(path)) {
             NPC npc = getPlayerCompanion(player);
             player.sendMessage(MessageUtil.msg(plugin,"companion-limit", npc, player));
-            return;
+            return null; // <-- CAMBIADO DE return; A return null;
         }
 
         // NombreNPC
-
         NPC npc = CitizensAPI.getNPCRegistry().createNPC(
                 EntityType.PLAYER,
                 player.getName() + " NPC"
@@ -223,18 +253,15 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
         );
 
         // SpawnNPC
-
         npc.spawn(player.getLocation());
         applyStats(npc);
 
         // Actualizacion de vida para el nametag
-
         if (plugin.getConfig().getBoolean("settings.health-name.enabled", true)) {
             CompanionNameUtil.updateHealthName(plugin, npc);
         }
 
         // Establece propiedades del NPC
-
         FollowTrait followTrait = npc.getOrAddTrait(FollowTrait.class);
         followTrait.setProtect(true);
 
@@ -242,7 +269,6 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
         npc.data().set(NPC.Metadata.DEFAULT_PROTECTED, false);
 
         // Asigna vida desde la config.yml
-
         if (npc.getEntity() instanceof org.bukkit.entity.Player npcPlayer) {
             npcPlayer.setGameMode(org.bukkit.GameMode.SURVIVAL);
 
@@ -250,7 +276,6 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
             double attackDamage = plugin.getConfig().getDouble("settings.stats.attack-damage", 8.0);
 
             var health = npcPlayer.getAttribute(Attribute.GENERIC_MAX_HEALTH);
-
             if (health != null) {
                 health.setBaseValue(maxHealth);
             }
@@ -258,29 +283,27 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
             npcPlayer.setHealth(maxHealth);
 
             var damage = npcPlayer.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
-
             if (damage != null) {
                 damage.setBaseValue(attackDamage);
             }
-
         }
 
         plugin.getDataManager().getData().set(getNpcPath(player.getUniqueId()), npc.getId());
         plugin.getDataManager().getData().set(getStatePath(player.getUniqueId()), "STAY");
         plugin.getDataManager().save();
 
-        player.sendMessage(MessageUtil.msg(plugin,"companion-created-succes", npc, player));
-        player.sendMessage(ChatColor.GRAY + "NPC ID: " + npc.getId());
+        // QUITAMOS LOS SEND MESSAGE DE AQUÍ PORQUE SE ENVIARÁN DESDE EL COMANDO
+
+        return npc; // <-- AÑADIDO: DEVOLVEMOS EL NPC CREADO
     }
 
     //================================ComandoRemove=====================================================
 
-    private void removeCompanion(Player player) {
+    private NPC removeCompanion(Player player) { // <-- CAMBIADO DE void A NPC
         NPC npc = getPlayerCompanion(player);
 
         if (npc == null) {
-            player.sendMessage(MessageUtil.msg(plugin,"companion-not-found", null, player));
-            return;
+            return null; // Si no tiene NPC, devolvemos null
         }
 
         npc.destroy();
@@ -288,7 +311,7 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
         plugin.getDataManager().getData().set("players." + player.getUniqueId(), null);
         plugin.getDataManager().save();
 
-        player.sendMessage(MessageUtil.msg(plugin,"companion-removed-succes", npc, player));
+        return npc; // <-- DEVOLVEMOS EL NPC PARA SACAR SU NOMBRE
     }
 
     //================================ComandoSummon=====================================================
@@ -562,16 +585,17 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
 
     private void sendUsage(Player player) {
 
-            player.sendMessage(ChatColor.RED + "/companion create [player_name]");
-            player.sendMessage(ChatColor.RED + "/companion remove [player_name]");
-            player.sendMessage(ChatColor.RED + "/companion summon");
-            player.sendMessage(ChatColor.RED + "/companion follow");
-            player.sendMessage(ChatColor.RED + "/companion stay");
-            player.sendMessage(ChatColor.RED + "/companion info");
-            player.sendMessage(ChatColor.RED + "/companion rename");
-            player.sendMessage(ChatColor.RED + "/companion skin");
-            player.sendMessage(ChatColor.RED + "/companion equip");
-            player.sendMessage(ChatColor.RED + "/companion pickup");
-            player.sendMessage(ChatColor.RED + "/companion gesture [sneak, sit, sleep]");
+            player.sendMessage(ChatColor.WHITE + "&e=== &bCompanion &fCommands &e=== &8Created by Braiton");
+            player.sendMessage(ChatColor.WHITE + "/companion create [player_name]");
+            player.sendMessage(ChatColor.WHITE + "/companion remove [player_name]");
+            player.sendMessage(ChatColor.WHITE + "/companion summon > Teleport Companion");
+            player.sendMessage(ChatColor.WHITE + "/companion follow > Start Follow");
+            player.sendMessage(ChatColor.WHITE + "/companion stay > Stop Follow");
+            player.sendMessage(ChatColor.WHITE + "/companion info");
+            player.sendMessage(ChatColor.WHITE + "/companion rename [newName]");
+            player.sendMessage(ChatColor.WHITE + "/companion skin [skinName]");
+            player.sendMessage(ChatColor.WHITE + "/companion equip > Open menu");
+            player.sendMessage(ChatColor.WHITE + "/companion pickup > Toggle command");
+            player.sendMessage(ChatColor.WHITE + "/companion gesture [sneak, sit, sleep, stop]");
     }
 }

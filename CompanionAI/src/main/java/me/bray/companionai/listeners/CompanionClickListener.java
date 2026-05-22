@@ -4,6 +4,7 @@ import me.bray.companionai.utils.MessageUtil;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.event.NPCDamageByEntityEvent;
 import net.citizensnpcs.editor.EquipmentEditor;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import me.bray.companionai.CompanionAI;
 import net.citizensnpcs.api.event.NPCRightClickEvent;
@@ -38,6 +39,14 @@ public class CompanionClickListener implements Listener {
         }
 
         if (player.isSneaking()) {
+
+            player.playSound(
+                    player.getLocation(),
+                    Sound.BLOCK_CHEST_OPEN,
+                    1.0f,
+                    1.0f
+            );
+
             Inventory inventory = npc.getOrAddTrait(Inventory.class);
             inventory.openInventory(player);
             return;
@@ -63,6 +72,14 @@ public class CompanionClickListener implements Listener {
         }
 
         event.setCancelled(true);
+
+        player.playSound(
+                player.getLocation(),
+                org.bukkit.Sound.ITEM_ARMOR_EQUIP_GENERIC,
+                1.0f,
+                1.0f
+        );
+
         openEquipment(player);
     }
 
@@ -84,7 +101,7 @@ public class CompanionClickListener implements Listener {
             plugin.getDataManager().getData().set(statePath, "STAY");
             plugin.getDataManager().save();
 
-            player.sendMessage(MessageUtil.msg(plugin, "companion-stay", npc, player));
+            player.sendMessage(MessageUtil.msg(plugin, "companion-stay-click", npc, player));
             return;
         }
 
@@ -97,7 +114,7 @@ public class CompanionClickListener implements Listener {
         plugin.getDataManager().getData().set(statePath, "FOLLOW");
         plugin.getDataManager().save();
 
-        player.sendMessage(MessageUtil.msg(plugin, "companion-follow", npc, player));
+        player.sendMessage(MessageUtil.msg(plugin, "companion-follow-click", npc, player));
     }
 
     private boolean isOwner(Player player, NPC npc) {

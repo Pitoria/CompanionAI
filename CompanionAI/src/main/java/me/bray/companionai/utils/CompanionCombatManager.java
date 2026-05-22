@@ -1,15 +1,13 @@
 package me.bray.companionai.utils;
 
 import me.bray.companionai.CompanionAI;
-import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,81 +31,81 @@ public class CompanionCombatManager {
         Material type = (handItem != null) ? handItem.getType() : Material.AIR;
         boolean isBreezeRod = (BREEZE_ROD_MAT != null && type == BREEZE_ROD_MAT);
 
-        // ==========================================================
-        // 1. DETERMINAR EL DELAY (VELOCIDAD) SEGÚN LA CONFIG
-        // ==========================================================
-        long delay = 40L; // Default
-        if (type == Material.BOW) {
-            delay = plugin.getConfig().getLong("combat-delay.archer", 40L);
-        } else if (type == Material.BLAZE_ROD) {
-            delay = plugin.getConfig().getLong("combat-delay.mage", 40L);
-        } else if (isBreezeRod) {
-            delay = plugin.getConfig().getLong("combat-delay.wind-elementalist", 40L);
-        }
-
-        if (type != Material.BOW && type != Material.BLAZE_ROD && !isBreezeRod) {
-            npc.getNavigator().setTarget(target, true);
-            return;
-        }
+        long delay = 40L;
 
         BukkitRunnable combatTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (!npc.isSpawned() || target.isDead() || !target.isValid()) {
-                    activeCombatTasks.remove(npcId);
+                if (npc == null || !npc.isSpawned() || target == null || target.isDead()) {
                     this.cancel();
+                    activeCombatTasks.remove(npcId);
                     return;
                 }
 
-                if (npc.getEntity().getLocation().distance(target.getLocation()) > 20.0) {
-                    activeCombatTasks.remove(npcId);
-                    this.cancel();
-                    return;
-                }
+                LivingEntity npcPlayer = (LivingEntity) npc.getEntity();
+                Vector direction = target.getLocation().toVector().subtract(npcPlayer.getLocation().toVector()).normalize();
 
-                if (npc.getNavigator().isNavigating()) npc.getNavigator().cancelNavigation();
-                Location npcLoc = npc.getEntity().getLocation();
-                npcLoc.setDirection(target.getLocation().toVector().subtract(npcLoc.toVector()));
-                npc.getEntity().teleport(npcLoc);
+                // Lógica de ataque
 
-                if (npc.getEntity() instanceof Player npcPlayer) {
-                    Vector direction = target.getEyeLocation().toVector().subtract(npcPlayer.getEyeLocation().toVector()).normalize();
+                // Arquero/Ballesta
 
-                    if (type == Material.BOW) {
-                        Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
-                        arrow.setShooter(npcPlayer);
-                        arrow.setVelocity(direction.multiply(1.8));
-                        arrow.setKnockbackStrength(2);
-                        arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
-                    } else if (type == Material.BLAZE_ROD) {
-                        Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
-                        arrow.setShooter(npcPlayer);
-                        arrow.setVelocity(direction.multiply(1.8));
-                        arrow.setFireTicks(1200);
-                        arrow.setKnockbackStrength(2);
-                        arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
-                    } else if (isBreezeRod) {
-                        try {
-                            Class<?> wcClass = Class.forName("org.bukkit.entity.WindCharge");
-                            Projectile wc = npcPlayer.launchProjectile((Class<? extends Projectile>) wcClass);
-                            wc.setShooter(npcPlayer);
-                            wc.setVelocity(direction.multiply(1.5));
-                        } catch (Exception e) {
-                            Arrow windArrow = npcPlayer.launchProjectile(Arrow.class);
-                            windArrow.setShooter(npcPlayer);
-                            windArrow.setVelocity(direction.multiply(2.0));
-                            windArrow.setKnockbackStrength(4);
-                            windArrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
-                        }
+                if (type == Material.BOW || type == Material.CROSSBOW) {
+                    Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
+                    arrow.setShooter(npcPlayer);
+                    arrow.setVelocity(direction.multiply(3.8));
+                    arrow.setDamage(arrow.getDamage() * getDamageFor("archer-damage", 1.5));
+                    arrow.setKnockbackStrength(2);
+                    arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
+
+                    // Mago de fuego
+
+                } else if (type == Material.BLAZE_ROD) {
+                    Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
+                    arrow.setShooter(npcPlayer);
+                    arrow.setVelocity(direction.multiply(3.5));
+                    arrow.setDamage(arrow.getDamage() * getDamageFor("fire-damage", 2.0));
+                    arrow.setFireTicks(1200);
+                    arrow.setMetadata("MagicArrow", new FixedMetadataValue(plugin, true));
+                    arrow.setKnockbackStrength(2);
+                    arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
+
+                    // Mago de hielo
+
+                } else if (type == Material.END_ROD) {
+                    Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
+                    arrow.setShooter(npcPlayer);
+                    arrow.setVelocity(direction.multiply(3.4));
+                    arrow.setDamage(arrow.getDamage() * getDamageFor("ice-damage", 1.6));
+                    arrow.setMetadata("IceArrow", new FixedMetadataValue(plugin, true));
+                    arrow.setMetadata("MagicArrow", new FixedMetadataValue(plugin, true));
+                    arrow.setKnockbackStrength(3);
+                    arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
+
+                    // Mago de viento
+
+                } else if (isBreezeRod) {
+                    try {
+                        Class<?> wcClass = Class.forName("org.bukkit.entity.WindCharge");
+                        Projectile wc = npcPlayer.launchProjectile((Class<? extends Projectile>) wcClass);
+                        wc.setShooter(npcPlayer);
+                        wc.setVelocity(direction.multiply(3.5));
+                    } catch (Exception e) {
+                        Arrow windArrow = npcPlayer.launchProjectile(Arrow.class);
+                        windArrow.setShooter(npcPlayer);
+                        windArrow.setVelocity(direction.multiply(2.0));
+                        windArrow.setDamage(windArrow.getDamage() * getDamageFor("wind-damage", 1.5));
+                        windArrow.setKnockbackStrength(4);
+                        windArrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
                     }
                 }
             }
         };
 
         activeCombatTasks.put(npcId, combatTask);
-        // ==========================================================
-        // 2. USAR EL DELAY AQUÍ ABAJO
-        // ==========================================================
         combatTask.runTaskTimer(plugin, 0L, delay);
+    }
+
+    private double getDamageFor(String path, double defaultValue) {
+        return plugin.getConfig().getDouble("combat." + path, defaultValue);
     }
 }

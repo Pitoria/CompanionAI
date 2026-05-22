@@ -22,15 +22,20 @@ public class CompanionProtectListener implements Listener {
     // 1. SI TE ATACAN A VOS
     @EventHandler
     public void onOwnerDamage(EntityDamageByEntityEvent event) {
+        // 1. Primero detectamos al jugador (aquí se crea la variable 'player')
         if (!(event.getEntity() instanceof Player player)) {
             return;
         }
 
+        // 2. Buscamos al atacante real
         LivingEntity attacker = getRealAttacker(event);
-        if (attacker == null || attacker instanceof Player) {
+
+        // 3. VALIDACIÓN: Si no hay atacante o si eres tú mismo, ignorar
+        if (attacker == null || attacker.equals(player)) {
             return;
         }
 
+        // 4. El resto de tu lógica para buscar el NPC de este 'player'
         String path = "players." + player.getUniqueId() + ".npc-id";
         if (!plugin.getDataManager().getData().contains(path)) {
             return;
@@ -39,44 +44,33 @@ public class CompanionProtectListener implements Listener {
         int npcId = plugin.getDataManager().getData().getInt(path);
         NPC npc = CitizensAPI.getNPCRegistry().getById(npcId);
 
-        if (npc == null || !npc.isSpawned()) {
-            return;
+        if (npc != null && npc.isSpawned()) {
+            new CompanionCombatManager(plugin).executeAttack(npc, attacker, player);
         }
-
-        if (attacker.equals(npc.getEntity())) {
-            return;
-        }
-
-        // Derivamos al mánager de combate
-        new CompanionCombatManager(plugin).executeAttack(npc, attacker, player);
     }
 
     // 2. SI LO ATACAN A ÉL
     @EventHandler
     public void onCompanionDamage(EntityDamageByEntityEvent event) {
+        // 1. Primero obtenemos el NPC que recibió el golpe (aquí se crea 'npc')
         NPC npc = CitizensAPI.getNPCRegistry().getNPC(event.getEntity());
-        if (npc == null || !npc.isSpawned()) {
+        if (npc == null || !isCompanion(npc)) {
             return;
         }
 
-        if (!isCompanion(npc)) {
-            return;
-        }
-
+        // 2. Buscamos al atacante y al dueño del NPC (aquí se crean 'attacker' y 'owner')
         LivingEntity attacker = getRealAttacker(event);
-        if (attacker == null || attacker instanceof Player) {
-            return;
-        }
-
-        if (attacker.equals(npc.getEntity())) {
-            return;
-        }
-
-        // Buscamos al dueño online para poder ejecutar el selector y el comando de salto si es un guerrero
         Player owner = getOwnerOf(npc);
 
-        // Derivamos al mánager de combate
-        new CompanionCombatManager(plugin).executeAttack(npc, attacker, owner);
+        // 3. VALIDACIÓN: Si el atacante es nulo o es el dueño pegándole a su propio NPC, ignorar
+        if (attacker == null || (owner != null && attacker.equals(owner))) {
+            return;
+        }
+
+        // 4. Si pasa los filtros, el NPC contraataca defendiendo a su dueño
+        if (owner != null) {
+            new CompanionCombatManager(plugin).executeAttack(npc, attacker, owner);
+        }
     }
 
     private boolean isCompanion(NPC npc) {

@@ -74,6 +74,11 @@ public class CompanionAI extends JavaPlugin {
                 , this
         );
 
+        getServer().getPluginManager().registerEvents(
+                new CombatListener(this),
+                this
+        );
+
         new CompanionFollowWatchdog(this);
 
         new CompanionRegenTask(this);
