@@ -38,16 +38,42 @@ public class CompanionWorldListener implements Listener {
         }
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            npc.teleport(
-                    player.getLocation(),
-                    org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN
-            );
+
+            if (npc.isSpawned()) {
+                npc.despawn();
+            }
+
+            npc.spawn(player.getLocation());
+
             FollowTrait followTrait = npc.getOrAddTrait(FollowTrait.class);
-            followTrait.follow(null);
             followTrait.follow(player);
             followTrait.setFollowingMargin(3.0);
-            followTrait.setProtect(true);
-        }, 1L);
+            followTrait.setProtect(false);
+
+            makeVulnerable(npc);
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (npc.isSpawned()) {
+                    makeVulnerable(npc);
+                }
+            }, 2L);
+
+        }, 5L);
+    }
+
+    private void makeVulnerable(NPC npc) {
+        npc.setProtected(false);
+        npc.data().set(NPC.Metadata.DEFAULT_PROTECTED, false);
+        npc.data().set("protected", false);
+
+        if (npc.getEntity() instanceof org.bukkit.entity.LivingEntity entity) {
+            entity.setInvulnerable(false);
+            entity.setNoDamageTicks(0);
+        }
+
+        if (npc.getEntity() instanceof org.bukkit.entity.Player npcPlayer) {
+            npcPlayer.setGameMode(org.bukkit.GameMode.SURVIVAL);
+        }
     }
 
     private NPC getPlayerCompanion(Player player) {
