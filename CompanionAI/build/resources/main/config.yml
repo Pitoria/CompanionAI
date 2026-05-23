@@ -26,15 +26,16 @@ settings:
 #============= Speed shot companion (Ticks: 20 ticks = 1 s) ===============#
 combat-delay:
   archer: 40 # => bow
-  mage: 40 # => blaze_rod
+  fire: 40 # => blaze_rod
   wind-elementalist: 40 # => breeze_rod
+  ice-mage: 40 # => end_rod
 combat:
-  # Arquero (Bow, CrossBow)
+  # Archer (Bow, CrossBow)
   archer-damage: 4.5
-  # Mago de Fuego (Blaze_rod)
+  # Fire (Blaze_rod)
   fire-damage: 3.0
-  # Mago de Hielo (End_rod)
+  # ice (End_rod)
   ice-damage: 4.6
-  # Viento (Breeze_rod)
+  # Winter (Breeze_rod)
   wind-damage: 4.5
 #============================[Companion Data]=================================

@@ -38,6 +38,10 @@ public class CompanionWorldListener implements Listener {
         }
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            npc.teleport(
+                    player.getLocation(),
+                    org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN
+            );
             FollowTrait followTrait = npc.getOrAddTrait(FollowTrait.class);
             followTrait.follow(null);
             followTrait.follow(player);

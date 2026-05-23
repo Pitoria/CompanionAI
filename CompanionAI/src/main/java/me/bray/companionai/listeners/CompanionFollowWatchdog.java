@@ -76,10 +76,10 @@ public class CompanionFollowWatchdog {
             }
 
             // REFRESCAR TRAIT
-            FollowTrait followTrait = npc.getOrAddTrait(FollowTrait.class);
-            followTrait.follow(player);
-            followTrait.setFollowingMargin(3.0);
-            followTrait.setProtect(true);
+            //FollowTrait followTrait = npc.getOrAddTrait(FollowTrait.class);
+            //followTrait.follow(player);
+            //followTrait.setFollowingMargin(3.0);
+            //followTrait.setProtect(true);
         }
     }
 }

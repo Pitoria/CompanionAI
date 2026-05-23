@@ -25,30 +25,58 @@ public class CompanionCombatManager {
         if (npc == null || !npc.isSpawned() || target == null || target.isDead() || !target.isValid()) return;
 
         int npcId = npc.getId();
-        if (activeCombatTasks.containsKey(npcId)) return;
+
+        // ARREGLO 1: Si ya estaba atacando, cancelamos la tarea vieja para ir a por el nuevo objetivo
+        if (activeCombatTasks.containsKey(npcId)) {
+            activeCombatTasks.get(npcId).cancel();
+            activeCombatTasks.remove(npcId);
+        }
 
         ItemStack handItem = npc.getEntity() instanceof LivingEntity living ? living.getEquipment().getItemInMainHand() : null;
         Material type = (handItem != null) ? handItem.getType() : Material.AIR;
         boolean isBreezeRod = (BREEZE_ROD_MAT != null && type == BREEZE_ROD_MAT);
 
+        boolean isRangedWeapon = type == Material.BOW
+                || type == Material.CROSSBOW
+                || type == Material.BLAZE_ROD
+                || type == Material.END_ROD
+                || isBreezeRod;
+
+        if (!isRangedWeapon) {
+            npc.getNavigator().setTarget(target, true);
+            return;
+        }
+
+        // DELAYS
         long delay = 40L;
+        if (type == Material.BOW || type == Material.CROSSBOW) {
+            delay = plugin.getConfig().getLong("combat-delay.archer", 40L);
+        } else if (type == Material.BLAZE_ROD) {
+            delay = plugin.getConfig().getLong("combat-delay.fire", 30L);
+        } else if (isBreezeRod) {
+            delay = plugin.getConfig().getLong("combat-delay.wind-elementalist", 20L);
+        } else if (type == Material.END_ROD) {
+            delay = plugin.getConfig().getLong("combat-delay.ice-mage", 50L);
+        }
 
         BukkitRunnable combatTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (npc == null || !npc.isSpawned() || target == null || target.isDead()) {
+                // ARREGLO 2: Validación dentro del ciclo para detenerlo si el mob desaparece
+                if (npc == null || !npc.isSpawned() || target == null || target.isDead() || !target.isValid()) {
                     this.cancel();
                     activeCombatTasks.remove(npcId);
                     return;
                 }
 
                 LivingEntity npcPlayer = (LivingEntity) npc.getEntity();
+
+                // Evitar error matemático al calcular vectores
+                if (target.getLocation().distanceSquared(npcPlayer.getLocation()) < 0.1) return;
+
                 Vector direction = target.getLocation().toVector().subtract(npcPlayer.getLocation().toVector()).normalize();
 
-                // Lógica de ataque
-
-                // Arquero/Ballesta
-
+                // LÓGICA DE ATAQUE A DISTANCIA
                 if (type == Material.BOW || type == Material.CROSSBOW) {
                     Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
                     arrow.setShooter(npcPlayer);
@@ -57,51 +85,49 @@ public class CompanionCombatManager {
                     arrow.setKnockbackStrength(2);
                     arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
 
-                    // Mago de fuego
-
                 } else if (type == Material.BLAZE_ROD) {
                     Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
                     arrow.setShooter(npcPlayer);
-                    arrow.setVelocity(direction.multiply(3.5));
+                    arrow.setVelocity(direction.multiply(1.5));
                     arrow.setDamage(arrow.getDamage() * getDamageFor("fire-damage", 2.0));
                     arrow.setFireTicks(1200);
                     arrow.setMetadata("MagicArrow", new FixedMetadataValue(plugin, true));
+                    arrow.setMetadata("FireArrow", new FixedMetadataValue(plugin, true));
                     arrow.setKnockbackStrength(2);
                     arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
 
-                    // Mago de hielo
-
                 } else if (type == Material.END_ROD) {
-                    Arrow arrow = npcPlayer.launchProjectile(Arrow.class);
-                    arrow.setShooter(npcPlayer);
-                    arrow.setVelocity(direction.multiply(3.4));
-                    arrow.setDamage(arrow.getDamage() * getDamageFor("ice-damage", 1.6));
-                    arrow.setMetadata("IceArrow", new FixedMetadataValue(plugin, true));
-                    arrow.setMetadata("MagicArrow", new FixedMetadataValue(plugin, true));
-                    arrow.setKnockbackStrength(3);
-                    arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
-
-                    // Mago de viento
+                    Snowball snowball = npcPlayer.launchProjectile(Snowball.class);
+                    snowball.setShooter(npcPlayer);
+                    snowball.setVelocity(direction.multiply(1.6));
+                    snowball.setMetadata("MagicArrow", new FixedMetadataValue(plugin, true));
+                    snowball.setMetadata("IceArrow", new FixedMetadataValue(plugin, true));
+                    npcPlayer.getWorld().playSound(npcPlayer.getLocation(), org.bukkit.Sound.ENTITY_SNOWBALL_THROW, 1.0f, 1.0f);
 
                 } else if (isBreezeRod) {
                     try {
                         Class<?> wcClass = Class.forName("org.bukkit.entity.WindCharge");
                         Projectile wc = npcPlayer.launchProjectile((Class<? extends Projectile>) wcClass);
                         wc.setShooter(npcPlayer);
-                        wc.setVelocity(direction.multiply(3.5));
+                        wc.setVelocity(direction.multiply(4.5));
+                        wc.setMetadata("MagicArrow", new FixedMetadataValue(plugin, true));
+                        wc.setMetadata("WindArrow", new FixedMetadataValue(plugin, true));
                     } catch (Exception e) {
                         Arrow windArrow = npcPlayer.launchProjectile(Arrow.class);
                         windArrow.setShooter(npcPlayer);
-                        windArrow.setVelocity(direction.multiply(2.0));
+                        windArrow.setVelocity(direction.multiply(4.0));
                         windArrow.setDamage(windArrow.getDamage() * getDamageFor("wind-damage", 1.5));
                         windArrow.setKnockbackStrength(4);
                         windArrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
                     }
+
+                    // ARREGLO 3: LÓGICA DE ATAQUE CUERPO A CUERPO (Melee)
                 }
             }
         };
 
         activeCombatTasks.put(npcId, combatTask);
+
         combatTask.runTaskTimer(plugin, 0L, delay);
     }
 
