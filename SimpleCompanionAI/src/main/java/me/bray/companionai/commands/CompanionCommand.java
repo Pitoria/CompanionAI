@@ -1,10 +1,12 @@
 package me.bray.companionai.commands;
 
 import me.bray.companionai.CompanionAI;
+import me.bray.companionai.utils.CompanionCitizensUtil;
 import me.bray.companionai.utils.CompanionNameUtil;
 import me.bray.companionai.utils.MessageUtil;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
+import net.citizensnpcs.api.npc.NPC.Metadata;
 import net.citizensnpcs.editor.EquipmentEditor;
 import net.citizensnpcs.trait.FollowTrait;
 import net.citizensnpcs.trait.SkinTrait;
@@ -247,6 +249,10 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
                 EntityType.PLAYER,
                 player.getName() + " NPC"
         );
+
+        // Select NPC
+        CompanionCitizensUtil.setOwner(npc, player.getUniqueId());
+
         npc.data().setPersistent(
                 "companion-base-name",
                 player.getName() + " NPC"
@@ -507,16 +513,7 @@ public class CompanionCommand implements CommandExecutor, TabCompleter {
         plugin.getDataManager().getData().set(getPickupPath(player.getUniqueId()), next);
         plugin.getDataManager().save();
 
-        CitizensAPI.getDefaultNPCSelector().select(player, npc);
-
-        boolean wasOp = player.isOp();
-
-        try {
-            player.setOp(true);
-            player.performCommand("npc pickupitems --set " + next);
-        } finally {
-            player.setOp(wasOp);
-        }
+        npc.data().setPersistent(Metadata.PICKUP_ITEMS, next);
 
         player.sendMessage(
                 next

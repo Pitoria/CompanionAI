@@ -1,18 +1,19 @@
 package me.bray.companionai.listeners;
 
 import me.bray.companionai.utils.MessageUtil;
+import me.bray.companionai.CompanionAI;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.event.NPCDamageByEntityEvent;
 import net.citizensnpcs.editor.EquipmentEditor;
-import org.bukkit.Sound;
-import org.bukkit.entity.Player;
-import me.bray.companionai.CompanionAI;
 import net.citizensnpcs.api.event.NPCRightClickEvent;
 import net.citizensnpcs.api.npc.NPC;
 import net.citizensnpcs.trait.FollowTrait;
+import net.citizensnpcs.api.trait.trait.Inventory;
+import net.citizensnpcs.util.PlayerAnimation;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import net.citizensnpcs.api.trait.trait.Inventory;
 
 import java.util.UUID;
 
@@ -50,6 +51,10 @@ public class CompanionClickListener implements Listener {
             Inventory inventory = npc.getOrAddTrait(Inventory.class);
             inventory.openInventory(player);
             return;
+        }
+
+        if (npc.getEntity() instanceof Player npcPlayer) {
+            PlayerAnimation.ARM_SWING.play(npcPlayer);
         }
 
         toggleFollow(player, npc);

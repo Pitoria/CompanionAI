@@ -33,9 +33,12 @@ pickup-disabled: "&cAhora %companion% no puede recoger items."
 companion-stay-click: " &c%companion% ya no te seguira."
 companion-follow-click: " &a%companion% te seguira hasta los confines del mundo."
 companion-gesture-help: "&cUsa /companion gesture [sit, sleep, sneka, stop]"
-companion-sit-succes: " &bTe espero sentado %player%."
-companion-sleep-succes: " &bIre a descansar un poco %player%."
-companion-sneak-succes: " &bEstoy oculto..."
+companion-sit-succes: "&bTe espero sentado %player%."
+companion-sit-already: "&cTu companion ya está sentado."
+companion-sleep-succes: "&bIre a descansar un poco %player%."
+companion-sleep-already:
+companion-sneak-succes: "&bEstoy oculto..."
+companion-sneak-already:
 companion-stop-succes: " &b¡Vamos %player%!"
 
 #------------------------------------------------------------------------------

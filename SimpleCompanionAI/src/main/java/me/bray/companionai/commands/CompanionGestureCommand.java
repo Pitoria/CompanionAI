@@ -4,7 +4,9 @@ import me.bray.companionai.CompanionAI;
 import me.bray.companionai.utils.MessageUtil;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
-import org.bukkit.ChatColor;
+import net.citizensnpcs.trait.SitTrait;
+import net.citizensnpcs.trait.SleepTrait;
+import net.citizensnpcs.trait.FollowTrait;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -58,15 +60,20 @@ public class CompanionGestureCommand {
             return;
         }
 
-        CitizensAPI.getDefaultNPCSelector().select(player, npc);
+        String sitPath = "players." + player.getUniqueId() + ".sitting";
 
-        boolean wasOp = player.isOp();
-        try {
-            player.setOp(true);
-            player.performCommand("npc sitting --explicit true");
-        } finally {
-            player.setOp(wasOp);
+        boolean alreadySitting = plugin.getDataManager().getData().getBoolean(sitPath, false);
+
+        if (alreadySitting) {
+            player.sendMessage(MessageUtil.msg(plugin, "companion-sit-already", npc, player));
+            return;
         }
+
+        SitTrait sitTrait = npc.getOrAddTrait(SitTrait.class);
+        sitTrait.setSitting(npc.getEntity().getLocation());
+
+        plugin.getDataManager().getData().set(sitPath, true);
+        plugin.getDataManager().save();
 
         player.sendMessage(MessageUtil.msg(plugin, "companion-sit-succes", npc, player));
     }
@@ -80,15 +87,16 @@ public class CompanionGestureCommand {
             return;
         }
 
-        CitizensAPI.getDefaultNPCSelector().select(player, npc);
+        SleepTrait sleepTrait = npc.getOrAddTrait(SleepTrait.class);
+        sleepTrait.setSleeping(npc.getEntity().getLocation());
 
-        boolean wasOp = player.isOp();
-        try {
-            player.setOp(true);
-            player.performCommand("npc panimate SLEEP");
-        } finally {
-            player.setOp(wasOp);
+        FollowTrait followTrait = npc.getTraitNullable(FollowTrait.class);
+        if (followTrait != null) {
+            followTrait.follow(null);
         }
+
+        plugin.getDataManager().getData().set("players." + player.getUniqueId() + ".state", "STAY");
+        plugin.getDataManager().save();
 
         player.sendMessage(MessageUtil.msg(plugin, "companion-sleep-succes", npc, player));
     }
@@ -102,20 +110,14 @@ public class CompanionGestureCommand {
             return;
         }
 
-        CitizensAPI.getDefaultNPCSelector().select(player, npc);
-
-        boolean wasOp = player.isOp();
-        try {
-            player.setOp(true);
-            player.performCommand("npc panimate SNEAK");
-        } finally {
-            player.setOp(wasOp);
+        if (npc.getEntity() instanceof Player npcPlayer) {
+            npcPlayer.setSneaking(true);
         }
 
         player.sendMessage(MessageUtil.msg(plugin, "companion-sneak-succes", npc, player));
     }
 
-    // Logica de parar todas las acciones
+    // Logica de STOP todas las GESTURES
     private void stop(Player player) {
         NPC npc = getPlayerCompanion(player);
 
@@ -124,17 +126,25 @@ public class CompanionGestureCommand {
             return;
         }
 
-        CitizensAPI.getDefaultNPCSelector().select(player, npc);
+        SitTrait sitTrait = npc.getTraitNullable(SitTrait.class);
 
-        boolean wasOp = player.isOp();
-        try {
-            player.setOp(true);
-            player.performCommand("npc panimate STOP_SLEEPING");
-            player.performCommand("npc panimate STOP_SNEAKING");
-            player.performCommand("npc sitting --explicit false");
-        } finally {
-            player.setOp(wasOp);
+        if (sitTrait != null) {
+            sitTrait.setSitting(null);
         }
+
+        if (npc.getEntity() instanceof Player npcPlayer) {
+            npcPlayer.setSneaking(false);
+        }
+
+        SleepTrait sleepTrait = npc.getTraitNullable(SleepTrait.class);
+
+        if (sleepTrait != null) {
+            sleepTrait.setSleeping(null);
+        }
+
+        String sitPath = "players." + player.getUniqueId() + ".sitting";
+        plugin.getDataManager().getData().set(sitPath, false);
+        plugin.getDataManager().save();
 
         player.sendMessage(MessageUtil.msg(plugin, "companion-stop-succes", npc, player));
     }
